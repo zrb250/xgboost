@@ -1,77 +1,53 @@
 /*!
  * Copyright 2019 XGBoost contributors
  *
- * \file c-api-demo.c
+ * \file audio-predict.c
  * \brief A simple example of using xgboost C API.
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <xgboost/c_api.h>
+#include <vector>
+//
+//#define safe_xgboost(call) {                                            \
+//int err = (call);                                                       \
+//if (err != 0) {                                                         \
+//  fprintf(stderr, "%s:%d: error in %s: %s\n", __FILE__, __LINE__, #call, XGBGetLastError()); \
+//  exit(1);                                                              \
+//}                                                                       \
+//}
 
-#define safe_xgboost(call) {                                            \
-int err = (call);                                                       \
-if (err != 0) {                                                         \
-  fprintf(stderr, "%s:%d: error in %s: %s\n", __FILE__, __LINE__, #call, XGBGetLastError()); \
-  exit(1);                                                              \
-}                                                                       \
+void safe_xgboost(int call) {
+int err = (call);
+if (err != 0) {
+  fprintf(stderr, "%s:%d: error: %s\n", __FILE__, __LINE__, XGBGetLastError());
+  exit(1);
+}
 }
 
+void formatFeat(std::vector<float> input, float * out)
+{
+    int len = input.size();
+    for (int i = 0; i < len; i++){
+        out[i] = input[i];
+    }
+    return 0;
+}
+
+
 int main(int argc, char** argv) {
-  int silent = 0;
-  int use_gpu = 0;  // set to 1 to use the GPU for training
-  
   // load the data
-  DMatrixHandle dtrain, dtest;
-  safe_xgboost(XGDMatrixCreateFromFile("../data/audio_train.txt", silent, &dtrain));
+  DMatrixHandle  dtest;
   safe_xgboost(XGDMatrixCreateFromFile("../data/audio_test.txt", silent, &dtest));
   
-  // create the booster
-  BoosterHandle booster;
-  DMatrixHandle eval_dmats[2] = {dtrain, dtest};
-  safe_xgboost(XGBoosterCreate(eval_dmats, 2, &booster));
-
-  // configure the training
-  // available parameters are described here:
-  //   https://xgboost.readthedocs.io/en/latest/parameter.html
-  //safe_xgboost(XGBoosterSetParam(booster, "tree_method", use_gpu ? "gpu_hist" : "hist"));
-  //if (use_gpu) {
-    // set the number of GPUs and the first GPU to use;
-    // this is not necessary, but provided here as an illustration
-   // safe_xgboost(XGBoosterSetParam(booster, "n_gpus", "1"));
-    //safe_xgboost(XGBoosterSetParam(booster, "gpu_id", "0"));
- // } else {
-     //avoid evaluating objective and metric on a GPU
-  //  safe_xgboost(XGBoosterSetParam(booster, "n_gpus", "0"));
- // }
-
-  //safe_xgboost(XGBoosterSetParam(booster, "objective", "multi:softmax"));
-  //safe_xgboost(XGBoosterSetParam(booster, "num_class", "17"));
- // safe_xgboost(XGBoosterSetParam(booster, "min_child_weight", "5"));
-  //safe_xgboost(XGBoosterSetParam(booster, "gamma", "0.1"));
-  //safe_xgboost(XGBoosterSetParam(booster, "max_depth", "2"));
-  //safe_xgboost(XGBoosterSetParam(booster, "verbosity", silent ? "0" : "1"));
-  //safe_xgboost(XGBoosterSetParam(booster, "eta", "0.5"));
-  
-  // train and evaluate for 10 iterations
-  int n_trees = 3;
-  const char* eval_names[2] = {"train", "test"};
-  const char* eval_result = NULL;
-  int i = 0;
-  for (i = 0; i < n_trees; ++i) {
-    safe_xgboost(XGBoosterUpdateOneIter(booster, i, dtrain));
-    safe_xgboost(XGBoosterEvalOneIter(booster, i, eval_dmats, eval_names, 2, &eval_result));
-    printf("%s\n", eval_result);
-  }
-
   // predict
   bst_ulong out_len = 0;
   const float* out_result = NULL;
   int n_print = 10;
 
   const char* fname="./pxgb.model";
-//safe_xgboost(XGBoosterSaveModel(booster, fname));
-  
+
   BoosterHandle bsth;
   safe_xgboost(XGBoosterCreate(dtest, 1, &bsth));
   safe_xgboost(XGBoosterLoadModel(bsth,fname))
@@ -82,25 +58,20 @@ int main(int argc, char** argv) {
   }
   printf("\n");
 
-  safe_xgboost(XGBoosterPredict(booster, dtest, 0, 0, &out_len, &out_result));
-  printf("y_pred: ");
-  for (i = 0; i < n_print; ++i) {
-    printf("%1.4f ", out_result[i]);
-  }
-  printf("\n");
 
-  // print true labels
-  safe_xgboost(XGDMatrixGetFloatInfo(dtest, "label", &out_len, &out_result));
-  printf("y_test: ");
-  for (i = 0; i < n_print; ++i) {
+  const int sample_rows = 1;
+  std::vector<float> input({499.787,62.4734,26.3046,110.959,191.072,26.3046,45.2967,0.16,1.3125,-1.29511,-2.27628,-3.39993,-1.25392,0.172414,67.4171,0.0,-0.611436,2.8026e-45,0.35522,0.295277,0.131719,0.0845613,360,390.977,0.151429,0.12625,60.0276,88.9758,8,4.50425,2.93,3.22,2,0.7325,4.88428,1.7761,0.35875,1,3,0.0131818,0.0989761,0.0966667,0.0555556,0.062361,3,0.0966667,0.03625,0.0555556,0.062361,3,0.980392,0,2.73038,1.7761});
+  float out[input.size()];
+  formatFeat(input, &out);
+  XGDMatrixCreateFromMat((float *) out, sample_rows, input.size(), -1, &dtest);
+  printf("y_vec: ");
+  for (i = 0; i < 1; ++i) {
     printf("%1.4f ", out_result[i]);
   }
   printf("\n");
 
   // free everything
-  safe_xgboost(XGBoosterFree(booster));
   safe_xgboost(XGBoosterFree(bsth));
-  safe_xgboost(XGDMatrixFree(dtrain));
   safe_xgboost(XGDMatrixFree(dtest));
   return 0;
 }

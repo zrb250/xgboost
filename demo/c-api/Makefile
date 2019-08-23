@@ -1,5 +1,8 @@
-SRC=c-api-demo.c
-TGT=c-api-demo
+#SRC=c-api-demo.c
+#TGT=c-api-demo
+SRC=lr-demo.c
+TGT=lr-demo
+
 
 cc=cc
 CFLAGS ?=-O3

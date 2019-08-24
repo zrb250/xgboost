@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <xgboost/c_api.h>
 #include <vector>
+#include <sys/time.h>
+#include<pthread.h>
 
 #define safe_xgboost(call) {                                            \
 int err = (call);                                                       \
@@ -51,6 +53,7 @@ int main(int argc, char** argv) {
   DMatrixHandle eval_dmats[1] = {ftest};
   //safe_xgboost(XGBoosterCreate(eval_dmats, 1, &bsth));
   safe_xgboost(XGBoosterCreate(0, 0, &bsth));
+  safe_xgboost(XGBoosterSetParam(bsth, "n_gpus", "0"));
   safe_xgboost(XGBoosterLoadModel(bsth,fname));
   safe_xgboost(XGBoosterPredict(bsth, dtest, 0, 0, &out_len, &out_result));
   printf("y_loadmodel: ");
@@ -58,14 +61,23 @@ int main(int argc, char** argv) {
     printf("%1.4f ", out_result[i]);
   }
   printf("\n");
+  
+  pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
+  for(int j=0; j <10; ++j){
+  struct timeval sv,ev;
+  gettimeofday(&sv,NULL);
+  pthread_mutex_lock(&mutex);
   safe_xgboost(XGBoosterPredict(bsth, ftest, 0, 0, &out_len, &out_result));
+  pthread_mutex_unlock(&mutex);
+  gettimeofday(&ev,NULL);
+  printf("timecost:ev:%ld, sv:%ld,  cost:%ld us\n",ev.tv_usec, sv.tv_usec,  ev.tv_usec-sv.tv_usec);
   printf("y_vec: ");
   for (i = 0; i < 1; ++i) {
     printf("%1.4f ", out_result[i]);
   }
   printf("\n");
+  }
 
   // free everything
   safe_xgboost(XGBoosterFree(bsth));

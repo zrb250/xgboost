@@ -10,7 +10,8 @@
 #include <xgboost/c_api.h>
 #include <vector>
 #include <sys/time.h>
-#include<pthread.h>
+#include <pthread.h>
+#include <string>
 
 #define safe_xgboost(call) {                                            \
 int err = (call);                                                       \
@@ -47,14 +48,15 @@ int main(int argc, char** argv) {
   int i=0;
   int n_print = 10;
 
-  const char* fname="./pxgb.model";
+  std::string s = "./pxgb.model";
+  //const char* fname="./pxgb.model";
 
   BoosterHandle bsth;
   DMatrixHandle eval_dmats[1] = {ftest};
   //safe_xgboost(XGBoosterCreate(eval_dmats, 1, &bsth));
   safe_xgboost(XGBoosterCreate(0, 0, &bsth));
   safe_xgboost(XGBoosterSetParam(bsth, "n_gpus", "0"));
-  safe_xgboost(XGBoosterLoadModel(bsth,fname));
+  safe_xgboost(XGBoosterLoadModel(bsth, s.c_str()));
   safe_xgboost(XGBoosterPredict(bsth, dtest, 0, 0, &out_len, &out_result));
   printf("y_loadmodel: ");
   for (i = 0; i < n_print; ++i) {

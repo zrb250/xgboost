@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
   int i=0;
   int n_print = 10;
 
-  std::string s = "./pxgb.model";
+  std::string s = "./pxgb.modelbak";
   //const char* fname="./pxgb.model";
 
   BoosterHandle bsth;
@@ -66,20 +66,20 @@ int main(int argc, char** argv) {
   
   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-  for(int j=0; j <10; ++j){
+ // for(int j=0; j <10; ++j){
   struct timeval sv,ev;
   gettimeofday(&sv,NULL);
   pthread_mutex_lock(&mutex);
-  safe_xgboost(XGBoosterPredict(bsth, ftest, 0, 0, &out_len, &out_result));
+  safe_xgboost(XGBoosterPredict(bsth, ftest, 4, 0, &out_len, &out_result));
   pthread_mutex_unlock(&mutex);
   gettimeofday(&ev,NULL);
   printf("timecost:ev:%ld, sv:%ld,  cost:%ld us\n",ev.tv_usec, sv.tv_usec,  ev.tv_usec-sv.tv_usec);
-  printf("y_vec: ");
-  for (i = 0; i < 1; ++i) {
+  printf("y_vec, out_len:%d\n", out_len);
+  for (i = 0; i < out_len; ++i) {
     printf("%1.4f ", out_result[i]);
   }
   printf("\n");
-  }
+  //}
 
   // free everything
   safe_xgboost(XGBoosterFree(bsth));

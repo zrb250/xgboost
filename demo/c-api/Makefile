@@ -1,10 +1,15 @@
 #SRC=c-api-demo.c
 #TGT=c-api-demo
-SRC=lr-demo.c
-TGT=lr-demo
+#SRC=lr-demo.c
+#TGT=lr-demo
+SRC=audio-predict.c
+TGT=audio-predict
+#SRC=zrb-demo.c
+#TGT=zrb_demo
 
 
-cc=cc
+#cc=cc
+cc=g++
 CFLAGS ?=-O3
 XGBOOST_ROOT ?=../..
 INCLUDE_DIR=-I$(XGBOOST_ROOT)/include -I$(XGBOOST_ROOT)/dmlc-core/include -I$(XGBOOST_ROOT)/rabit/include
